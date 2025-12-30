@@ -1,8 +1,10 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\RBAC\Http\Controllers\RBACController;
+use Modules\RBAC\Http\Controllers\PermissionController;
+use Modules\RBAC\Http\Controllers\RoleController;
 
-Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
-    Route::apiResource('rbacs', RBACController::class)->names('rbac');
+Route::middleware(['auth:sanctum', 'role:admin'])->prefix('rbac')->group(function () {
+    Route::apiResource('roles', RoleController::class)->names('roles');
+    Route::apiResource('permissions', PermissionController::class)->names('permissions')->only(['index', 'store']);
 });
