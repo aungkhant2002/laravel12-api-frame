@@ -3,7 +3,6 @@
 namespace Modules\RBAC\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Role;
@@ -38,7 +37,7 @@ class RoleController extends Controller
     {
         try {
             $role = Role::findOrFail($id);
-            return response()->json([$role, 200]);
+            return response()->json([$role], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'The role not found'
@@ -57,7 +56,7 @@ class RoleController extends Controller
         ]);
         $role->update(['name' => $validated['name']]);
 
-        return response()->json([$role, 200]);
+        return response()->json([$role], 200);
     }
 
     /**

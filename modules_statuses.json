@@ -1,5 +1,6 @@
 {
     "Auth": true,
     "User": true,
-    "RBAC": true
+    "RBAC": true,
+    "OTP": true
 }
