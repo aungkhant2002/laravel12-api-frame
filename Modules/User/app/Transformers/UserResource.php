@@ -15,6 +15,7 @@ class UserResource extends JsonResource
         return [
             'name' => ucfirst($this->name),
             'email' => $this->email,
+            'phone' => $this->phone,
         ];
     }
 }
