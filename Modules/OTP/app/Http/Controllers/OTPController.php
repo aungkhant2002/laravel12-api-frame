@@ -14,61 +14,79 @@ class OTPController extends Controller
     {
         $data = $request->validate([
             'phone' => 'required|string',
-            'purpose' => 'required|in:login,forgot_password',
+            'purpose' => 'required|in:register,forgot_password',
         ]);
 
         $user = User::where('phone', $data['phone'])->first();
-        if ($data['purpose'] == 'forgot_password' && ! $user) {
+
+        if ($data['purpose'] === 'register' && $user) {
+            return response()->json([
+                'message' => 'Phone number already registered',
+            ], 422);
+        }
+
+        if ($data['purpose'] === 'forgot_password' && !$user) {
             return response()->json([
                 'message' => 'User not found',
             ], 404);
         }
 
-        $code = $otpService->generate(
-            $data['phone'],
-            $data['purpose'],
-            $user?->id
+        $otpCode = $otpService->generate(
+            phone: $data['phone'],
+            purpose: $data['purpose'],
+            userId: $user?->id,
         );
 
-        // Send sms here
-        // SmsService::send($data['phone'], "Your OTP is $code");
+        // TODO: send SMS here
+//         SmsService::send($data['phone'], "Your OTP is $otpCode");
 
         return response()->json([
             'success' => true,
-            'message' => 'OTP sent'
+            'otp' => $otpCode,
         ]);
     }
 
     public function verifyOtp(Request $request, OtpService $otpService)
     {
         $data = $request->validate([
-            'phone' => 'required|string',
-            'purpose' => 'required|in:login,forgot_password',
+            'phone' => 'required|string|exists:users,phone',
+            'purpose' => 'required|in:register,forgot_password',
             'otp' => 'required|digits:6',
         ]);
 
-        $record = $otpService->verify($data['phone'], $data['purpose'], $data['otp']);
-
-        $user = User::firstOrCreate(
-            ['phone' => $data['phone']],
-            ['name' => 'OTP User']
+        $otpRecord = $otpService->verify(
+            $data['phone'],
+            $data['purpose'],
+            $data['otp']
         );
 
-        if ($data['purpose'] === 'forgot_password') {
+        if ($data['purpose'] === 'register') {
+
+            $user = $otpRecord->user;
+
+            $user->update([
+                'phone_verified_at' => now(),
+                'is_active' => true,
+            ]);
+
+            $user->refresh();
+
+            $user->assignRole('user');
+
+            $token = $user->createToken('auth_token')->plainTextToken;
+
             return response()->json([
                 'success' => true,
-                'message' => 'OTP verified. You may reset password.',
+                'message' => 'Registration completed',
+                'token' => $token,
+                'user' => $user,
             ]);
         }
 
-        // LOGIN
-        $token = $user->createToken('otp_login')->plainTextToken;
-
         return response()->json([
             'success' => true,
-            'token' => $token,
-            'user' => $user,
+            'message' => 'OTP verified. You may reset password.',
         ]);
-
     }
+
 }

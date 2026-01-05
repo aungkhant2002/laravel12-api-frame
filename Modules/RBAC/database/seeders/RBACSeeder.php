@@ -56,6 +56,9 @@ class RBACSeeder extends Seeder
             [
                 'name' => 'Super Admin',
                 'password' => Hash::make('password'),
+                'phone' => '0123456789',
+                'phone_verified_at' => now(),
+                'is_active' => true,
             ]
         );
 

@@ -2,6 +2,8 @@
 
 namespace Modules\OTP\Services;
 
+use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Modules\OTP\Models\Otp;
 
@@ -14,14 +16,19 @@ class OtpService
             'user_id' => $userId ?? auth()->id(),
             'target' => $phone,
             'purpose' => $purpose,
-            'otp' => Hash::make($otp),
-            'expired_at' => now()->addMinutes(3),
+            'otp_hash' => Hash::make($otp),
+            'expires_at' => now()->addMinutes(3),
         ]);
 
-        return (string) $otp;
+        //  DEBUG OTP
+        if (app()->environment('local')) {
+            \Log::info("OTP for {$phone}: {$otp}");
+        }
+
+        return (string)$otp;
     }
 
-    public function verify(string $phone, string $purpose, string $otp): bool
+    public function verify(string $phone, string $purpose, string $otp)
     {
         $record = Otp::where('target', $phone)
             ->where('purpose', $purpose)
@@ -29,7 +36,11 @@ class OtpService
             ->latest()
             ->first();
 
-        if (! $record || ! Hash::check($otp, $record->otp)) {
+        if (! $record) {
+            throw new \Exception('Invalid or expired OTP');
+        }
+
+        if (! Hash::check($otp, $record->otp_hash)) {
             throw new \Exception('Invalid or expired OTP');
         }
 
@@ -37,4 +48,6 @@ class OtpService
 
         return $record;
     }
+
+
 }

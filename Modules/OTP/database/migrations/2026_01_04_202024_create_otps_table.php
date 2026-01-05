@@ -15,9 +15,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->string('target');
-            $table->enum('purpose', ['login', 'forgot_password']);
-            $table->string('otp');
-            $table->timestamp('expired_at');
+            $table->enum('purpose', ['register', 'forgot_password']);
+            $table->string('otp_hash');
+            $table->timestamp('expires_at');
             $table->timestamp('verified_at')->nullable();
             $table->timestamps();
 

@@ -2,8 +2,11 @@
 
 namespace Modules\OTP\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Queue\Connectors\BeanstalkdConnector;
 
 // use Modules\OTP\Database\Factories\OtpFactory;
 
@@ -28,9 +31,14 @@ class Otp extends Model
         'verified_at' => 'datetime',
     ];
 
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
     public function scopeValid($query)
     {
-        return $query->whereNull('verified_at')->where('expired_at', '>', now());
+        return $query->whereNull('verified_at')->where('expires_at', '>', now());
     }
 
     public function markAsVerified(): void
