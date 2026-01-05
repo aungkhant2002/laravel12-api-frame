@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Modules\OTP\Models\Otp;
 use Modules\OTP\Services\OtpService;
 use Modules\User\Transformers\UserResource;
 
@@ -46,7 +47,7 @@ class AuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'login'    => 'required|string', // email OR phone
+            'login' => 'required|string', // email OR phone
             'password' => 'required|string|min:6',
         ]);
 
@@ -54,14 +55,14 @@ class AuthController extends Controller
             ->orWhere('phone', $data['login'])
             ->first();
 
-        if (! $user || ! Hash::check($data['password'], $user->password)) {
+        if (!$user || !Hash::check($data['password'], $user->password)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid credentials',
             ], 401);
         }
 
-        if ($user->phone && ! $user->phone_verified_at) {
+        if ($user->phone && !$user->phone_verified_at) {
             return response()->json([
                 'success' => false,
                 'message' => 'Please verify your phone number first.',
@@ -95,6 +96,19 @@ class AuthController extends Controller
             'password' => 'required|string|min:6|confirmed',
         ]);
 
+        $otp = Otp::where('target', $data['phone'])
+            ->where('purpose', 'forgot_password')
+            ->whereNotNull('verified_at')
+            ->latest()
+            ->first();
+
+        if (! $otp) {
+            return response()->json([
+                'success' => false,
+                'message' => 'OTP verification required',
+            ], 403);
+        }
+
         $user = User::where('phone', $data['phone'])->firstOrFail();
 
         $user->update([
@@ -104,7 +118,6 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Password reset successful',
-        ]);
+        ], 200);
     }
-
 }
