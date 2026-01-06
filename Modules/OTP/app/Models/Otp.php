@@ -24,16 +24,24 @@ class Otp extends Model
         'otp_hash',
         'expires_at',
         'verified_at',
+        'attempts',
+        'last_sent_at',
     ];
 
     protected $casts = [
-        'expired_at' => 'datetime',
+        'expires_at' => 'datetime',
         'verified_at' => 'datetime',
+        'last_sent_at' => 'datetime',
     ];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->whereNotNull('verified_at');
     }
 
     public function scopeValid($query)

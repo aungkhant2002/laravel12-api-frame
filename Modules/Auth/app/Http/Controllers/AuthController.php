@@ -7,13 +7,11 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Modules\OTP\Models\Otp;
-use Modules\OTP\Services\OtpService;
+use Modules\OTP\Services\PhonePasswordResetService;
 use Modules\User\Transformers\UserResource;
 
 class AuthController extends Controller
 {
-
     public function register(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -23,7 +21,7 @@ class AuthController extends Controller
             'password' => 'required|string|min:6|confirmed',
         ]);
 
-        $user = User::create([
+        User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'phone' => $validated['phone'],
@@ -31,38 +29,31 @@ class AuthController extends Controller
             'is_active' => false,
         ]);
 
-        // Send OTP (register)
-        app(OtpService::class)->generate(
-            phone: $validated['phone'],
-            purpose: 'register',
-            userId: $user->id
-        );
-
         return response()->json([
             'success' => true,
-            'message' => 'OTP sent to your phone. Please verify.',
+            'message' => 'Registered. Please request OTP to verify your phone.',
         ], 201);
     }
 
     public function login(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'login' => 'required|string', // email OR phone
-            'password' => 'required|string|min:6',
+            'login' => 'required|string|max:50',
+            'password' => 'required|string|min:6|max:30',
         ]);
 
         $user = User::where('email', $data['login'])
             ->orWhere('phone', $data['login'])
             ->first();
 
-        if (!$user || !Hash::check($data['password'], $user->password)) {
+        if (! $user || ! Hash::check($data['password'], $user->password)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid credentials',
             ], 401);
         }
 
-        if ($user->phone && !$user->phone_verified_at) {
+        if ($user->phone && ! $user->phone_verified_at) {
             return response()->json([
                 'success' => false,
                 'message' => 'Please verify your phone number first.',
@@ -70,8 +61,8 @@ class AuthController extends Controller
         }
 
         $user->tokens()->delete();
-
         $token = $user->createToken('auth_token')->plainTextToken;
+
         return response()->json([
             'success' => true,
             'user' => new UserResource($user),
@@ -89,31 +80,30 @@ class AuthController extends Controller
         ]);
     }
 
-    public function resetPassword(Request $request): JsonResponse
+    public function resetPassword(Request $request, PhonePasswordResetService $passwordResetService): JsonResponse
     {
         $data = $request->validate([
             'phone' => 'required|string|exists:users,phone',
+            'reset_token' => 'required|string',
             'password' => 'required|string|min:6|confirmed',
         ]);
 
-        $otp = Otp::where('target', $data['phone'])
-            ->where('purpose', 'forgot_password')
-            ->whereNotNull('verified_at')
-            ->latest()
-            ->first();
+        $user = User::where('phone', $data['phone'])->firstOrFail();
 
-        if (! $otp) {
+        try {
+            $passwordResetService->consume($user, $data['reset_token']);
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'OTP verification required',
-            ], 403);
+                'message' => $e->getMessage(),
+            ], 422);
         }
-
-        $user = User::where('phone', $data['phone'])->firstOrFail();
 
         $user->update([
             'password' => Hash::make($data['password']),
         ]);
+
+        $user->tokens()->delete();
 
         return response()->json([
             'success' => true,
