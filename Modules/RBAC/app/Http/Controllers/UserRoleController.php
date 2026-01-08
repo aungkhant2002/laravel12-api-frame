@@ -2,13 +2,15 @@
 
 namespace Modules\RBAC\Http\Controllers;
 
+use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class UserRoleController extends Controller
 {
-    public function assign(Request $request, User $user)
+    public function assign(Request $request, User $user): JsonResponse
     {
         $data = $request->validate([
             'roles' => 'required|array',
@@ -17,18 +19,23 @@ class UserRoleController extends Controller
 
         $user->syncRoles($data['roles']);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Roles assigned successfully',
-            'role' => $user->getRoleNames()
-        ]);
+        return ApiResponse::success(
+            data: [
+                'user_id' => $user->id,
+                'roles' => $user->getRoleNames(),
+            ],
+            message: 'Roles assigned successfully'
+        );
     }
 
-    public function show(User $user)
+    public function show(User $user): JsonResponse
     {
-        return response()->json([
-            'success' => true,
-            'roles' => $user->getRoleNames()
-        ]);
+        return ApiResponse::success(
+            data: [
+                'user_id' => $user->id,
+                'roles' => $user->getRoleNames(),
+            ],
+            message: 'User roles fetched successfully'
+        );
     }
 }

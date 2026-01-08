@@ -2,6 +2,7 @@
 
 namespace Modules\RBAC\Http\Controllers;
 
+use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,7 +15,10 @@ class RoleController extends Controller
      */
     public function index(): JsonResponse
     {
-        return response()->json(Role::all(), 200);
+        return ApiResponse::success(
+            data: Role::query()->latest()->get(),
+            message: 'Roles fetched successfully.',
+        );
     }
 
     /**
@@ -27,7 +31,11 @@ class RoleController extends Controller
         ]);
 
         $role = Role::create(['name' => $validated['name']]);
-        return response()->json([$role, 201]);
+        return ApiResponse::success(
+            data: $role,
+            message: 'Role created successfully.',
+            status: 201
+        );
     }
 
     /**
@@ -35,14 +43,19 @@ class RoleController extends Controller
      */
     public function show(string $id): JsonResponse
     {
-        try {
-            $role = Role::findOrFail($id);
-            return response()->json([$role], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'The role not found'
-            ], 400);
+        $role = Role::find($id);
+        if (!$role) {
+            return ApiResponse::error(
+                code: 'ROLE_NOT_FOUND',
+                message: 'The role not found.',
+                status: 404
+            );
         }
+
+        return ApiResponse::success(
+            data: $role,
+            message: 'Role fetched successfully.',
+        );
     }
 
     /**
@@ -50,13 +63,26 @@ class RoleController extends Controller
      */
     public function update(Request $request, string $id): JsonResponse
     {
-        $role = Role::findOrFail($id);
+        $role = Role::find($id);
+
+        if (!$role) {
+            return ApiResponse::error(
+                code: 'ROLE_NOT_FOUND',
+                message: 'The role not found.',
+                status: 404
+            );
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|unique:roles,name,' . $role->id,
         ]);
+
         $role->update(['name' => $validated['name']]);
 
-        return response()->json([$role], 200);
+        return ApiResponse::success(
+            data: $role->fresh(),
+            message: 'Role updated successfully.',
+        );
     }
 
     /**
@@ -64,11 +90,19 @@ class RoleController extends Controller
      */
     public function destroy(string $id): JsonResponse
     {
-        $role = Role::findOrFail($id);
+        $role = Role::find($id);
+        if (!$role) {
+            return ApiResponse::error(
+                code: 'ROLE_NOT_FOUND',
+                message: 'The role not found.',
+                status: 404
+            );
+        }
         $role->delete();
 
-        return response()->json([
-            'message' => 'Role deleted successfully'
-        ], 200);
+        return ApiResponse::success(
+            data: (object)[],
+            message: 'Role deleted successfully.',
+        );
     }
 }

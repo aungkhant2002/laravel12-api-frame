@@ -2,12 +2,12 @@
 
 namespace Modules\Auth\Http\Controllers;
 
+use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Modules\OTP\Services\OtpService;
 use Modules\OTP\Services\PhonePasswordResetService;
 use Modules\User\Transformers\UserResource;
 
@@ -33,11 +33,12 @@ class AuthController extends Controller
         // Auto-send OTP for registration
         // $otpMeta = $otpService->generate($validated['phone'], 'register', $user->id);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Registered. Please request OTP to verify your phone.',
-//            'data' => $otpMeta,
-        ], 201);
+        return ApiResponse::success(
+            data: (object) [],
+            message: "Registered. Please request OTP to verify your phone.",
+            meta: [],
+            status: 201
+        );
     }
 
     public function login(Request $request): JsonResponse
@@ -68,21 +69,25 @@ class AuthController extends Controller
         $user->tokens()->delete();
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        return response()->json([
-            'success' => true,
-            'user' => new UserResource($user),
-            'token' => $token,
-        ]);
+        return ApiResponse::success(
+            data: [
+                'user' => new UserResource($user),
+                'token' => $token,
+            ],
+            message: "Login successfully.",
+            status: 200
+        );
     }
 
     public function logout(Request $request): JsonResponse
     {
         $request->user()->tokens()->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Logged out successfully',
-        ]);
+        return ApiResponse::success(
+            data: (object) [],
+            message: "Logged out successfully.",
+            status: 200
+        );
     }
 
     public function resetPassword(Request $request, PhonePasswordResetService $passwordResetService): JsonResponse
@@ -97,11 +102,13 @@ class AuthController extends Controller
 
         try {
             $passwordResetService->consume($user, $data['reset_token']);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 422);
+        } catch (\Throwable $e) {
+            return ApiResponse::error(
+                code: 'INVALID_RESET_TOKEN',
+                message: $e->getMessage(),
+                details: (object) [],
+                status: 422
+            );
         }
 
         $user->update([
@@ -110,9 +117,10 @@ class AuthController extends Controller
 
         $user->tokens()->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Password reset successful',
-        ], 200);
+        return ApiResponse::success(
+            data: (object) [],
+            message: "Password reset successfully.",
+            status: 200
+        );
     }
 }

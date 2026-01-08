@@ -2,8 +2,10 @@
 
 namespace Modules\OTP\Services;
 
-use App\Jobs\SendSms;
 use Illuminate\Support\Facades\Hash;
+use Modules\OTP\Exceptions\OtpCooldownException;
+use Modules\OTP\Exceptions\OtpDailyLimitException;
+use Modules\OTP\Exceptions\OtpInvalidException;
 use Modules\OTP\Models\Otp;
 use Modules\OTP\Models\OtpRequest;
 
@@ -15,27 +17,21 @@ class OtpService
 
     public function __construct()
     {
-        $this->expiresSeconds = config('otp.expires_seconds');
-        $this->cooldownSeconds = config('otp.cooldown_seconds');
-        $this->maxPerDay = config('otp.max_per_day');
+        $this->expiresSeconds = (int)config('otp.expires_seconds');
+        $this->cooldownSeconds = (int)config('otp.cooldown_seconds');
+        $this->maxPerDay = (int)config('otp.max_per_day');
     }
 
-    /**
-     * Request OTP (also RESEND).
-     * - Daily cap enforced via otp_requests
-     * - Cooldown enforced via otp_requests
-     * - Active OTP stored/updated in otps table
-     */
     public function generate(string $phone, string $purpose, ?int $userId = null): array
     {
         // (1) Daily limit
-            $todayCount = OtpRequest::where('target', $phone)
-                ->where('purpose', $purpose)
-                ->where('created_at', '>=', now()->startOfDay())
-                ->count();
+        $todayCount = OtpRequest::where('target', $phone)
+            ->where('purpose', $purpose)
+            ->where('created_at', '>=', now()->startOfDay())
+            ->count();
 
         if ($todayCount >= $this->maxPerDay) {
-            throw new \Exception('OTP daily limit exceeded. Please try again tomorrow.');
+            throw new OtpDailyLimitException('OTP daily limit exceeded. Please try again tomorrow.');
         }
 
         // (2) Cooldown
@@ -48,12 +44,10 @@ class OtpService
             $nextAllowedAt = $lastRequest->created_at->copy()->addSeconds($this->cooldownSeconds);
 
             if (now()->lt($nextAllowedAt)) {
-                $remaining = (int) now()->diffInSeconds($nextAllowedAt);
-
-                // hard clamp (safety) so it never exceeds cooldownSeconds
+                $remaining = (int)now()->diffInSeconds($nextAllowedAt);
                 $remaining = min($remaining, $this->cooldownSeconds);
 
-                throw new \Exception("Please wait {$remaining} seconds before requesting another OTP.");
+                throw new OtpCooldownException($remaining);
             }
         }
 
@@ -91,12 +85,13 @@ class OtpService
         OtpRequest::create([
             'target' => $phone,
             'purpose' => $purpose,
-            'created_at' => now(),
         ]);
 
+        // (5) Send SMS (queue)
 //        $message = "Your OTP is {$otpCode}. It expires in 5 minutes.";
-//        SendSms::dispatch($phone, $message);
+//        SendSms::dispatch($phone, $message)->afterCommit();
 
+        // (6) Dev-only logging
         if (app()->environment('local')) {
             \Log::info("OTP for {$phone} ({$purpose}): {$otpCode}");
         }
@@ -120,7 +115,7 @@ class OtpService
             ->first();
 
         if (!$record || !Hash::check($otp, $record->otp_hash)) {
-            throw new \Exception('Invalid or expired OTP');
+            throw new OtpInvalidException('Invalid or expired OTP');
         }
 
         $record->markAsVerified();

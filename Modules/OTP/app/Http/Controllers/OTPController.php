@@ -2,16 +2,18 @@
 
 namespace Modules\OTP\Http\Controllers;
 
+use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Modules\OTP\Models\PhonePasswordResetToken;
 use Modules\OTP\Services\OtpService;
 use Modules\OTP\Services\PhonePasswordResetService;
+use Modules\User\Transformers\UserResource;
 
 class OTPController extends Controller
 {
-    public function requestOtp(Request $request, OtpService $otpService)
+    public function requestOtp(Request $request, OtpService $otpService): JsonResponse
     {
         $data = $request->validate([
             'phone' => 'required|string',
@@ -22,25 +24,28 @@ class OTPController extends Controller
 
         if ($data['purpose'] === 'register') {
             if (!$user) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'User not found. Please register first.',
-                ], 404);
+                return ApiResponse::error(
+                    code: 'USER_NOT_FOUND',
+                    message: 'User not found. Please register first.',
+                    status: 404
+                );
             }
 
             if ($user->phone_verified_at) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Phone already verified.',
-                ], 422);
+                return ApiResponse::error(
+                    code: 'PHONE_ALREADY_REGISTERED',
+                    message: 'Phone already verified.',
+                    status: 422
+                );
             }
         }
 
         if ($data['purpose'] === 'forgot_password' && !$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User not found',
-            ], 404);
+            return ApiResponse::error(
+                code: 'USER_NOT_FOUND',
+                message: 'User not found.',
+                status: 404
+            );
         }
 
         try {
@@ -49,18 +54,19 @@ class OTPController extends Controller
                 purpose: $data['purpose'],
                 userId: $user?->id,
             );
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 429);
+        } catch (\Throwable $e) {
+            return ApiResponse::error(
+                code: 'OTP_RATE_LIMIT',
+                message: $e->getMessage(),
+                status: 429
+            );
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'OTP sent',
-            'data' => $result,
-        ]);
+        return ApiResponse::success(
+            data: $result,
+            message: 'OTP has been sent to your registered phone number.',
+            status: 200
+        );
     }
 
     public function verifyOtp(Request $request, OtpService $otpService, PhonePasswordResetService $passwordResetService)
@@ -77,11 +83,12 @@ class OTPController extends Controller
                 $data['purpose'],
                 $data['otp']
             );
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid or expired OTP',
-            ], 422);
+        } catch (\Throwable $e) {
+            return ApiResponse::error(
+                code: 'INVALID_OTP',
+                message: 'Invalid or expired OTP',
+                status: 422
+            );
         }
 
         if ($data['purpose'] === 'register') {
@@ -101,22 +108,24 @@ class OTPController extends Controller
             $user->tokens()->delete();
             $token = $user->createToken('auth_token')->plainTextToken;
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Registration completed',
-                'token' => $token,
-                'user' => $user,
-            ]);
+            return ApiResponse::success(
+                data: [
+                    'token' => $token,
+                    'user' => new UserResource($user),
+                ],
+                message: 'Registration completed',
+                status: 200
+            );
         }
 
         // forgot_password => return reset_token
         $user = $otpRecord->user;
         $reset = $passwordResetService->issue($user);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'OTP verified. You may reset password.',
-            'data' => $reset,
-        ]);
+        return ApiResponse::success(
+            data: $reset,
+            message: 'OTP verified. You may reset password.',
+            status: 200
+        );
     }
 }

@@ -16,5 +16,5 @@ Route::middleware(['auth:sanctum', 'role:admin|coach'])->prefix('rbac')->group(f
     Route::get('roles/{role}/permissions', [RolePermissionController::class, 'show']);
 
     Route::apiResource('roles', RoleController::class)->names('roles');
-    Route::apiResource('permissions', PermissionController::class)->names('permissions')->only(['index', 'store']);
+    Route::apiResource('permissions', PermissionController::class)->names('permissions');
 });
