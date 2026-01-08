@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Modules\OTP\Services\OtpService;
 use Modules\OTP\Services\PhonePasswordResetService;
 use Modules\User\Transformers\UserResource;
 
@@ -16,7 +17,7 @@ class AuthController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email',
+            'email' => 'required|email|max:50|unique:users,email',
             'phone' => 'required|string|unique:users,phone|max:20',
             'password' => 'required|string|min:6|confirmed',
         ]);
@@ -29,9 +30,13 @@ class AuthController extends Controller
             'is_active' => false,
         ]);
 
+        // Auto-send OTP for registration
+        // $otpMeta = $otpService->generate($validated['phone'], 'register', $user->id);
+
         return response()->json([
             'success' => true,
             'message' => 'Registered. Please request OTP to verify your phone.',
+//            'data' => $otpMeta,
         ], 201);
     }
 

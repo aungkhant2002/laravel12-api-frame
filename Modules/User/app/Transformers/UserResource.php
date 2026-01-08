@@ -16,6 +16,9 @@ class UserResource extends JsonResource
             'name' => ucfirst($this->name),
             'email' => $this->email,
             'phone' => $this->phone,
+
+            'roles' => method_exists($this->resource, 'getRoleNames') ? $this->getRoleNames()->values() : [],
+            'permissions' => method_exists($this->resource, 'getPermissionNames') ? $this->getAllPermissions()->pluck('name')->values() : [],
         ];
     }
 }

@@ -2,15 +2,23 @@
 
 namespace Modules\OTP\Services;
 
+use App\Jobs\SendSms;
 use Illuminate\Support\Facades\Hash;
 use Modules\OTP\Models\Otp;
 use Modules\OTP\Models\OtpRequest;
 
 class OtpService
 {
-    private int $expiresSeconds = 300;     // 5 minutes
-    private int $cooldownSeconds = 60;    // 60 seconds
-    private int $maxPerDay = 5;           // 5 sends/day per phone+purpose
+    private int $expiresSeconds;
+    private int $cooldownSeconds;
+    private int $maxPerDay;
+
+    public function __construct()
+    {
+        $this->expiresSeconds = config('otp.expires_seconds');
+        $this->cooldownSeconds = config('otp.cooldown_seconds');
+        $this->maxPerDay = config('otp.max_per_day');
+    }
 
     /**
      * Request OTP (also RESEND).
@@ -21,10 +29,10 @@ class OtpService
     public function generate(string $phone, string $purpose, ?int $userId = null): array
     {
         // (1) Daily limit
-        $todayCount = OtpRequest::where('target', $phone)
-            ->where('purpose', $purpose)
-            ->where('created_at', '>=', now()->startOfDay())
-            ->count();
+            $todayCount = OtpRequest::where('target', $phone)
+                ->where('purpose', $purpose)
+                ->where('created_at', '>=', now()->startOfDay())
+                ->count();
 
         if ($todayCount >= $this->maxPerDay) {
             throw new \Exception('OTP daily limit exceeded. Please try again tomorrow.');
@@ -85,6 +93,9 @@ class OtpService
             'purpose' => $purpose,
             'created_at' => now(),
         ]);
+
+//        $message = "Your OTP is {$otpCode}. It expires in 5 minutes.";
+//        SendSms::dispatch($phone, $message);
 
         if (app()->environment('local')) {
             \Log::info("OTP for {$phone} ({$purpose}): {$otpCode}");
