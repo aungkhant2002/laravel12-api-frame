@@ -13,9 +13,12 @@ class UserResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
+            'id' => $this->id,
             'name' => ucfirst($this->name),
             'email' => $this->email,
             'phone' => $this->phone,
+            'is_active' => $this->is_active ?? true,
+            'phone_verified_at' => $this->phone_verified_at,
 
             'roles' => method_exists($this->resource, 'getRoleNames') ? $this->getRoleNames()->values() : [],
             'permissions' => method_exists($this->resource, 'getPermissionNames') ? $this->getAllPermissions()->pluck('name')->values() : [],

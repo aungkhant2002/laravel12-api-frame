@@ -51,20 +51,20 @@ class RBACSeeder extends Seeder
         );
 
         // create admin user
-        $adminUser = User::firstOrCreate(
-            ['email' => 'admin@gmail.com'],
-            [
-                'name' => 'Super Admin',
-                'password' => Hash::make('password'),
-                'phone' => '0123456789',
-                'phone_verified_at' => now(),
-                'is_active' => true,
-            ]
-        );
+//        $adminUser = User::firstOrCreate(
+//            ['email' => 'admin@gmail.com'],
+//            [
+//                'name' => 'Super Admin',
+//                'password' => Hash::make('password'),
+//                'phone' => '0123456789',
+//                'phone_verified_at' => now(),
+//                'is_active' => true,
+//            ]
+//        );
 
         // assign admin role
-        if (!$adminUser->hasRole('admin')) {
-            $adminUser->assignRole('admin');
-        }
+//        if (!$adminUser->hasRole('admin')) {
+//            $adminUser->assignRole('admin');
+//        }
     }
 }
