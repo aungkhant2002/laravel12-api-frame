@@ -16,36 +16,35 @@ class UserSeeder extends Seeder
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         // Ensure roles exist with SAME guard as RBACSeeder
-        foreach (['admin', 'coach', 'user'] as $name) {
+        foreach (['Super Admin', 'Court Manager', 'Support Staff', 'Coach', 'User'] as $name) {
             Role::firstOrCreate([
                 'name' => $name,
                 'guard_name' => $guard,
             ]);
         }
 
-        // Create ONLY if you want a second admin; otherwise remove this block
         $admin = User::firstOrCreate(
-            ['email' => 'admin@example.com'],
+            ['email' => 'admin@mtf.com'],
             [
                 'name' => 'Admin',
-                'phone' => '+959000000001',
+                'phone' => '09799123456',
                 'password' => bcrypt('password'),
                 'phone_verified_at' => now(),
                 'is_active' => true,
             ]
         );
-        $admin->syncRoles(['admin']); // safer than assignRole
+        $admin->syncRoles(['Super Admin']);
 
         // Coaches
         User::factory()
             ->count(5)
             ->create()
-            ->each(fn (User $u) => $u->syncRoles(['coach']));
+            ->each(fn (User $u) => $u->syncRoles(['Coach']));
 
         // Normal users
         User::factory()
             ->count(50)
             ->create()
-            ->each(fn (User $u) => $u->syncRoles(['user']));
+            ->each(fn (User $u) => $u->syncRoles(['User']));
     }
 }

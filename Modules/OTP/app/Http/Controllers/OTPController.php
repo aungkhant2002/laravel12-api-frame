@@ -102,7 +102,7 @@ class OTPController extends Controller
             $user->refresh();
 
             if (method_exists($user, 'assignRole')) {
-                $user->assignRole('user');
+                $user->assignRole('User');
             }
 
             $user->tokens()->delete();

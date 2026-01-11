@@ -20,22 +20,24 @@ class RBACSeeder extends Seeder
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         // Roles
-        $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => $guard]);
-        $coachRole = Role::firstOrCreate(['name' => 'coach', 'guard_name' => $guard]);
-        $userRole = Role::firstOrCreate(['name' => 'user', 'guard_name' => $guard]);
+        $adminRole = Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => $guard]);
+        $managerRole = Role::firstOrCreate(['name' => 'Court Manager', 'guard_name' => $guard]);
+        $staffRole = Role::firstOrCreate(['name' => 'Support Staff', 'guard_name' => $guard]);
+        $coachRole = Role::firstOrCreate(['name' => 'Coach', 'guard_name' => $guard]);
+        $userRole = Role::firstOrCreate(['name' => 'User', 'guard_name' => $guard]);
 
         // Permissions
         $permissions = [
-            'user.view',
-            'user.create',
-            'user.update',
-            'user.delete',
+            'users.view',
+            'users.create',
+            'users.update',
+            'users.delete',
 
             'booking.create',
             'booking.update',
             'booking.cancel',
 
-            'role.assign',
+            'roles.assign',
         ];
 
         foreach ($permissions as $permission) {
@@ -50,21 +52,5 @@ class RBACSeeder extends Seeder
             Permission::where('guard_name', $guard)->get()
         );
 
-        // create admin user
-//        $adminUser = User::firstOrCreate(
-//            ['email' => 'admin@gmail.com'],
-//            [
-//                'name' => 'Super Admin',
-//                'password' => Hash::make('password'),
-//                'phone' => '0123456789',
-//                'phone_verified_at' => now(),
-//                'is_active' => true,
-//            ]
-//        );
-
-        // assign admin role
-//        if (!$adminUser->hasRole('admin')) {
-//            $adminUser->assignRole('admin');
-//        }
     }
 }

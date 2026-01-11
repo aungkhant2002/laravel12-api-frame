@@ -26,14 +26,14 @@ class UserFactory extends Factory
         return [
             'name' => $this->faker->name(),
             'email' => $this->faker->unique()->safeEmail(),
-            'phone' => $this->faker->unique()->e164PhoneNumber(),
+            'phone' => $this->faker->unique()->numerify('09#########'),
 
             // optional fields if your table has them
-            'is_active' => true,
+            'is_active' => $this->faker->boolean(70),
             'phone_verified_at' => now(),
 
             'password' => Hash::make('password'), // for local dev
-            'remember_token' => Str::random(10),
+            'remember_token' => Str::random(20),
         ];
     }
 

@@ -6,7 +6,7 @@ use Modules\RBAC\Http\Controllers\RoleController;
 use Modules\RBAC\Http\Controllers\RolePermissionController;
 use Modules\RBAC\Http\Controllers\UserRoleController;
 
-Route::middleware(['auth:sanctum', 'role:admin|coach'])->prefix('rbac')->group(function () {
+Route::middleware(['auth:sanctum', 'role:Super Admin|Court Manager'])->prefix('rbac')->group(function () {
     // Assign Role to user
     Route::post('users/{user}/roles', [UserRoleController::class, 'assign']);
     Route::get('users/{user}/roles', [UserRoleController::class, 'show']);
